@@ -1,0 +1,519 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VNEF Hope - Bringing Hope to Every Classroom</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.6/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Language content object
+        const content = {
+            en: {
+                title: "VNEF Hope",
+                hero: {
+                    title: "Bring Hope to Every Classroom!",
+                    subtitle: "Support Vietnam’s poor children with transparent blockchain donations. Woof!",
+                    cta: "Donate Now"
+                },
+                nav: {
+                    about: "About",
+                    tokenomics: "Tokenomics",
+                    roadmap: "Roadmap",
+                    team: "Team",
+                    donate: "Donate"
+                },
+                about: {
+                    title: "About VNEF Hope",
+                    text1: "VNEF Hope is a nonprofit charity platform powered by Polygon blockchain, fetching donations to provide scholarships, books, and classrooms for poor kids in Vietnam’s remote areas like Điện Biên and Hà Giang.",
+                    text2: "Our HOPE token ensures every donation is transparent and impactful. Join our pack to give kids a chance to learn! Woof!"
+                },
+                tokenomics: {
+                    title: "HOPE Tokenomics",
+                    table: [
+                        { purpose: "Charity Fund", percent: "50%", amount: "500 billion", notes: "80% locked for 2 years, funds scholarships & classrooms." },
+                        { purpose: "Project Dev", percent: "20%", amount: "200 billion", notes: "Tech, marketing, operations." },
+                        { purpose: "Team", percent: "15%", amount: "150 billion", notes: "Locked 1-2 years, released gradually." },
+                        { purpose: "Airdrop/Rewards", percent: "10%", amount: "100 billion", notes: "Community fetch-fest." },
+                        { purpose: "Liquidity", percent: "5%", amount: "50 billion", notes: "QuickSwap pool." }
+                    ]
+                },
+                roadmap: {
+                    title: "Roadmap to the Moon",
+                    items: [
+                        { time: "Q2 2025", activities: "Write whitepaper, audit contracts. Create website, Telegram/Twitter. Partner with Quỹ Vì Tầm Vóc Việt.", goals: "5,000 community members, contracts audited." },
+                        { time: "Q3 2025", activities: "Airdrop 10 billion HOPE. Pre-seed ($50,000). QuickSwap liquidity pool.", goals: "20,000 users, $20,000 liquidity." },
+                        { time: "Q4 2025", activities: "Support 1,000 kids. IDO on QuickSwap ($100,000).", goals: "$100,000 raised, 1,000 kids helped." },
+                        { time: "Q1-Q2 2026", activities: "List on KuCoin. Support 3,000 kids, build 5 classrooms.", goals: "50,000 users, $300,000 raised." },
+                        { time: "Q3-Q4 2026", activities: "Expand to Laos. List on Binance. Support 5,000 kids.", goals: "100,000 users, $500,000 raised." }
+                    ]
+                },
+                team: {
+                    title: "Our Pack",
+                    members: [
+                        { name: "Mr. Ichiro", role: "Founder/CEO", desc: "Finance guru with Polygon token experience." },
+                        { name: "Mr. Hiro", role: "Blockchain Dev", desc: "Solidity wizard fixing Gas estimation fails." },
+                        { name: "Ms. Asami", role: "Education Expert", desc: "10 years working with remote schools." }
+                    ]
+                },
+                donate: {
+                    title: "Donate to Make a Difference",
+                    text: "Use HOPE tokens or fiat to support kids’ education. Every donation is transparent on Polygon blockchain! Woof!",
+                    connectWallet: "Please connect your wallet to donate with HOPE tokens.",
+                    placeholder: "Enter HOPE amount",
+                    donateButton: "Donate HOPE",
+                    fiatButton: "Donate with Fiat"
+                },
+                footer: {
+                    text: "Join the VNEF Hope pack and bring hope to every classroom!",
+                    links: {
+                        telegram: "Telegram",
+                        twitter: "Twitter",
+                        whitepaper: "Whitepaper"
+                    },
+                    copyright: "© 2025 VNEF Hope. All rights reserved."
+                },
+                wallet: {
+                    connect: "Connect Wallet",
+                    connected: "Connected: ",
+                    modalTitle: "Select Wallet",
+                    metamask: "MetaMask",
+                    trustWallet: "Trust Wallet",
+                    walletConnect: "WalletConnect",
+                    comingSoon: "Support coming soon!"
+                }
+            },
+            vi: {
+                title: "VNEF Hope",
+                hero: {
+                    title: "Mang Hy Vọng Đến Từng Lớp Học!",
+                    subtitle: "Hỗ trợ trẻ em nghèo Việt Nam với quyên góp minh bạch qua blockchain. Woof!",
+                    cta: "Quyên Góp Ngay"
+                },
+                nav: {
+                    about: "Giới Thiệu",
+                    tokenomics: "Tokenomics",
+                    roadmap: "Lộ Trình",
+                    team: "Đội Ngũ",
+                    donate: "Quyên Góp"
+                },
+                about: {
+                    title: "Giới Thiệu VNEF Hope",
+                    text1: "VNEF Hope là nền tảng từ thiện phi lợi nhuận sử dụng blockchain Polygon để quyên góp minh bạch, cung cấp học bổng, sách vở, và lớp học cho trẻ em nghèo ở vùng sâu vùng xa Việt Nam như Điện Biên và Hà Giang.",
+                    text2: "Token HOPE đảm bảo mọi khoản quyên góp đều minh bạch và tạo tác động. Tham gia đội của chúng tôi để mang cơ hội học tập đến cho trẻ em! Woof!"
+                },
+                tokenomics: {
+                    title: "Tokenomics HOPE",
+                    table: [
+                        { purpose: "Quỹ Từ Thiện", percent: "50%", amount: "500 tỷ", notes: "80% khóa trong 2 năm, hỗ trợ học bổng và lớp học." },
+                        { purpose: "Phát Triển Dự Án", percent: "20%", amount: "200 tỷ", notes: "Công nghệ, tiếp thị, vận hành." },
+                        { purpose: "Đội Ngũ", percent: "15%", amount: "150 tỷ", notes: "Khóa 1-2 năm, phát hành dần." },
+                        { purpose: "Airdrop/Phần Thưởng", percent: "10%", amount: "100 tỷ", notes: "Thu hút cộng đồng." },
+                        { purpose: "Thanh Khoản", percent: "5%", amount: "50 tỷ", notes: "Pool trên QuickSwap." }
+                    ]
+                },
+                roadmap: {
+                    title: "Lộ Trình Vươn Tới Mặt Trăng",
+                    items: [
+                        { time: "Q2 2025", activities: "Viết sách trắng, kiểm toán hợp đồng. Tạo website, Telegram/Twitter. Hợp tác với Quỹ Vì Tầm Vóc Việt.", goals: "5.000 thành viên cộng đồng, hợp đồng kiểm toán xong." },
+                        { time: "Q3 2025", activities: "Airdrop 10 tỷ HOPE. Vòng pre-seed (50.000 USD). Pool thanh khoản QuickSwap.", goals: "20.000 người dùng, 20.000 USD thanh khoản." },
+                        { time: "Q4 2025", activities: "Hỗ trợ 1.000 trẻ em. IDO trên QuickSwap (100.000 USD).", goals: "100.000 USD quyên góp, 1.000 trẻ em được hỗ trợ." },
+                        { time: "Q1-Q2 2026", activities: "Niêm yết trên KuCoin. Hỗ trợ 3.000 trẻ em, xây 5 lớp học.", goals: "50.000 người dùng, 300.000 USD quyên góp." },
+                        { time: "Q3-Q4 2026", activities: "Mở rộng sang Lào. Niêm yết trên Binance. Hỗ trợ 5.000 trẻ em.", goals: "100.000 người dùng, 500.000 USD quyên góp." }
+                    ]
+                },
+                team: {
+                    title: "Đội Ngũ Của Chúng Tôi",
+                    members: [
+                        { name: "Ông Ichiro", role: "Nhà Sáng Lập/CEO", desc: "Chuyên gia tài chính với kinh nghiệm triển khai token trên Polygon." },
+                        { name: "Ông Hiro", role: "Lập Trình Viên Blockchain", desc: "Phù thủy Solidity, khắc phục lỗi Gas estimation failed." },
+                        { name: "Bà Asami", role: "Chuyên Gia Giáo Dục", desc: "10 năm làm việc với các trường học vùng sâu." }
+                    ]
+                },
+                donate: {
+                    title: "Quyên Góp Để Tạo Thay Đổi",
+                    text: "Sử dụng token HOPE hoặc tiền pháp định để hỗ trợ giáo dục trẻ em. Mọi quyên góp đều minh bạch trên blockchain Polygon! Woof!",
+                    connectWallet: "Vui lòng kết nối ví để quyên góp bằng token HOPE.",
+                    placeholder: "Nhập số lượng HOPE",
+                    donateButton: "Quyên Góp HOPE",
+                    fiatButton: "Quyên Góp Bằng Tiền Pháp Định"
+                },
+                footer: {
+                    text: "Tham gia đội VNEF Hope và mang hy vọng đến từng lớp học!",
+                    links: {
+                        telegram: "Telegram",
+                        twitter: "Twitter",
+                        whitepaper: "Sách Trắng"
+                    },
+                    copyright: "© 2025 VNEF Hope. Mọi quyền được bảo lưu."
+                },
+                wallet: {
+                    connect: "Kết Nối Ví",
+                    connected: "Đã Kết Nối: ",
+                    modalTitle: "Chọn Ví",
+                    metamask: "MetaMask",
+                    trustWallet: "Trust Wallet",
+                    walletConnect: "WalletConnect",
+                    comingSoon: "Hỗ trợ sắp ra mắt!"
+                }
+            }
+        };
+
+        // Wallet Modal Component
+        const WalletModal = ({ isOpen, onClose, onSelectWallet, language }) => {
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
+                        <h3 className="text-xl font-bold mb-4">{content[language].wallet.modalTitle}</h3>
+                        <div className="space-y-4">
+                            <button
+                                onClick={() => onSelectWallet('metamask')}
+                                className="w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                            >
+                                {content[language].wallet.metamask}
+                            </button>
+                            <button
+                                onClick={() => onSelectWallet('trustwallet')}
+                                className="w-full bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                            >
+                                {content[language].wallet.trustWallet}
+                            </button>
+                            <button
+                                onClick={() => onSelectWallet('walletconnect')}
+                                className="w-full bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                            >
+                                {content[language].wallet.walletConnect}
+                            </button>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="mt-4 text-gray-600 hover:text-gray-800"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // Header Component
+        const Header = ({ connectWallet, account, language, setLanguage }) => {
+            const [isModalOpen, setIsModalOpen] = useState(false);
+
+            const handleWalletSelect = (wallet) => {
+                setIsModalOpen(false);
+                connectWallet(wallet);
+            };
+
+            return (
+                <header className="bg-white shadow sticky top-0 z-50">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                        <div className="flex items-center">
+                            <img src="https://i.ibb.co/KmS5yqN/hope-logo.png" alt="VNEF Hope Logo" className="h-12"/>
+                            <h1 className="ml-4 text-2xl font-bold text-gray-800">{content[language].title}</h1>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                            <nav className="flex space-x-4">
+                                <a href="#about" className="text-gray-600 hover:text-red-500">{content[language].nav.about}</a>
+                                <a href="#tokenomics" className="text-gray-600 hover:text-red-500">{content[language].nav.tokenomics}</a>
+                                <a href="#roadmap" className="text-gray-600 hover:text-red-500">{content[language].nav.roadmap}</a>
+                                <a href="#team" className="text-gray-600 hover:text-red-500">{content[language].nav.team}</a>
+                                <a href="#donate" className="text-gray-600 hover:text-red-500">{content[language].nav.donate}</a>
+                            </nav>
+                            <select
+                                value={language}
+                                onChange={(e) => setLanguage(e.target.value)}
+                                className="border rounded px-2 py-1"
+                            >
+                                <option value="en">English</option>
+                                <option value="vi">Tiếng Việt</option>
+                            </select>
+                            <button
+                                onClick={() => setIsModalOpen(true)}
+                                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                            >
+                                {account ? `${content[language].wallet.connected}${account.slice(0, 6)}...` : content[language].wallet.connect}
+                            </button>
+                        </div>
+                    </div>
+                    <WalletModal
+                        isOpen={isModalOpen}
+                        onClose={() => setIsModalOpen(false)}
+                        onSelectWallet={handleWalletSelect}
+                        language={language}
+                    />
+                </header>
+            );
+        };
+
+        // Hero Section
+        const Hero = ({ language }) => (
+            <section className="bg-gradient-to-r from-red-500 to-orange-500 text-white py-20 text-center">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-4xl md:text-5xl font-bold mb-4">{content[language].hero.title}</h2>
+                    <p className="text-xl mb-8">{content[language].hero.subtitle}</p>
+                    <a
+                        href="#donate"
+                        className="bg-white text-red-500 px-6 py-3 rounded-full font-semibold hover:bg-gray-100"
+                    >
+                        {content[language].hero.cta}
+                    </a>
+                </div>
+            </section>
+        );
+
+        // About Section
+        const About = ({ language }) => (
+            <section id="about" className="py-16 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">{content[language].about.title}</h2>
+                    <p className="text-lg text-gray-600 mb-4">{content[language].about.text1}</p>
+                    <p className="text-lg text-gray-600">{content[language].about.text2}</p>
+                </div>
+            </section>
+        );
+
+        // Tokenomics Section
+        const Tokenomics = ({ language }) => (
+            <section id="tokenomics" className="py-16 bg-gray-100">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">{content[language].tokenomics.title}</h2>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-red-500 text-white">
+                                    <th className="p-4">Purpose</th>
+                                    <th className="p-4">%</th>
+                                    <th className="p-4">Amount (HOPE)</th>
+                                    <th className="p-4">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {content[language].tokenomics.table.map((row, index) => (
+                                    <tr key={index} className="border-b">
+                                        <td className="p-4">{row.purpose}</td>
+                                        <td className="p-4">{row.percent}</td>
+                                        <td className="p-4">{row.amount}</td>
+                                        <td className="p-4">{row.notes}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        );
+
+        // Roadmap Section
+        const Roadmap = ({ language }) => (
+            <section id="roadmap" className="py-16 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">{content[language].roadmap.title}</h2>
+                    <div className="space-y-8">
+                        {content[language].roadmap.items.map((item, index) => (
+                            <div key={index} className="flex flex-col md:flex-row items-start">
+                                <div className="md:w-1/4 font-semibold text-red-500">{item.time}</div>
+                                <div className="md:w-3/4">
+                                    <p>{item.activities}</p>
+                                    <p className="text-gray-600">{item.goals}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        );
+
+        // Team Section
+        const Team = ({ language }) => (
+            <section id="team" className="py-16 bg-gray-100">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">{content[language].team.title}</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {content[language].team.members.map((member, index) => (
+                            <div key={index} className="bg-white p-6 rounded-lg shadow text-center">
+                                <h3 className="text-xl font-semibold text-gray-800">{member.name}</h3>
+                                <p className="text-gray-600">{member.role}</p>
+                                <p className="text-gray-500 text-sm">{member.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        );
+
+        // Donate Section
+        const Donate = ({ account, donate, language }) => (
+            <section id="donate" className="py-16 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <h2 className="text-3xl font-bold text-gray-800 mb-8">{content[language].donate.title}</h2>
+                    <p className="text-lg text-gray-600 mb-8">{content[language].donate.text}</p>
+                    {account ? (
+                        <div className="flex flex-col items-center">
+                            <input
+                                id="donationAmount"
+                                type="number"
+                                placeholder={content[language].donate.placeholder}
+                                className="border p-2 rounded mb-4 w-64"
+                            />
+                            <button
+                                onClick={() => donate(document.getElementById('donationAmount').value)}
+                                className="bg-red-500 text-white px-6 py-3 rounded-full font-semibold hover:bg-red-600"
+                            >
+                                {content[language].donate.donateButton}
+                            </button>
+                        </div>
+                    ) : (
+                        <p className="text-red-500">{content[language].donate.connectWallet}</p>
+                    )}
+                    <a
+                        href="https://moonpay.com"
+                        target="_blank"
+                        className="mt-4 inline-block bg-gray-500 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600"
+                    >
+                        {content[language].donate.fiatButton}
+                    </a>
+                </div>
+            </section>
+        );
+
+        // Footer Component
+        const Footer = ({ language }) => (
+            <footer className="bg-gray-800 text-white py-8">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <p className="mb-4">{content[language].footer.text}</p>
+                    <div className="flex justify-center space-x-6">
+                        <a href="https://t.me/VNEFHope" target="_blank" className="hover:text-red-500">{content[language].footer.links.telegram}</a>
+                        <a href="https://twitter.com/VNEFHope" target="_blank" className="hover:text-red-500">{content[language].footer.links.twitter}</a>
+                        <a href="https://www.vnefhope.com/whitepaper.pdf" target="_blank" className="hover:text-red-500">{content[language].footer.links.whitepaper}</a>
+                    </div>
+                    <p className="mt-4 text-sm">{content[language].footer.copyright}</p>
+                </div>
+            </footer>
+        );
+
+        // Main App Component
+        const App = () => {
+            const [account, setAccount] = useState(null);
+            const [language, setLanguage] = useState('en');
+
+            const connectWallet = async (wallet) => {
+                if (wallet === 'metamask') {
+                    if (window.ethereum) {
+                        try {
+                            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                            setAccount(accounts[0]);
+                        } catch (error) {
+                            console.error('Wallet connection failed:', error);
+                            alert(language === 'en' ? 'Failed to connect wallet. Please try again.' : 'Kết nối ví thất bại. Vui lòng thử lại.');
+                        }
+                    } else {
+                        alert(language === 'en' ? 'Please install MetaMask to donate with HOPE tokens.' : 'Vui lòng cài đặt MetaMask để quyên góp bằng token HOPE.');
+                    }
+                } else {
+                    alert(`${content[language].wallet.comingSoon} (${wallet === 'trustwallet' ? content[language].wallet.trustWallet : content[language].wallet.walletConnect})`);
+                }
+            };
+
+            const donate = async (amount) => {
+                if (!account) {
+                    alert(language === 'en' ? 'Please connect your wallet first.' : 'Vui lòng kết nối ví trước.');
+                    return;
+                }
+                if (!amount || amount <= 0) {
+                    alert(language === 'en' ? 'Please enter a valid donation amount.' : 'Vui lòng nhập số tiền quyên góp hợp lệ.');
+                    return;
+                }
+
+                try {
+                    const web3 = new Web3(window.ethereum);
+                    const contractAddress = '0xad169794b08a469315af48f8a72cc825baf7f819';
+                    const contractABI = [
+                        {
+                            "inputs": [
+                                { "internalType": "uint256", "name": "amount", "type": "uint256" }
+                            ],
+                            "name": "donate",
+                            "outputs": [],
+                            "stateMutability": "nonpayable",
+                            "type": "function"
+                        }
+                    ];
+                    const contract = new web3.eth.Contract(contractABI, contractAddress);
+                    await contract.methods.donate(web3.utils.toWei(amount, 'ether')).send({ from: account });
+                    alert(language === 'en' ? 'Donation successful! Thank you for supporting VNEF Hope!' : 'Quyên góp thành công! Cảm ơn bạn đã hỗ trợ VNEF Hope!');
+                } catch (error) {
+                    console.error('Donation failed:', error);
+                    alert(language === 'en' ? 'Donation failed. Please try again.' : 'Quyên góp thất bại. Vui lòng thử lại.');
+                }
+            };
+
+            return (
+                <div>
+                    <Header connectWallet={connectWallet} account={account} language={language} setLanguage={setLanguage} />
+                    <Hero language={language} />
+                    <About language={language} />
+                    <Tokenomics language={language} />
+                    <Roadmap language={language} />
+                    <Team language={language} />
+                    <Donate account={account} donate={donate} language={language} />
+                    <Footer language={language} />
+                </div>
+            );
+        };
+
+        // Render the App
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
